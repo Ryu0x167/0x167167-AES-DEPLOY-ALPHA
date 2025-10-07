@@ -1,25 +1,108 @@
+import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.IvParameterSpec;
+import java.util.Base64;
+
+public class AESEncryption {
+    public static void main(String[] args) throws Exception {
+        KeyGenerator keyGen = KeyGenerator.getInstance("AES");
+        keyGen.init(256);
+        SecretKey key = keyGen.generateKey();
+
+        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+        byte[] iv = new byte[16];
+        new java.security.SecureRandom().nextBytes(iv);
+        IvParameterSpec ivSpec = new IvParameterSpec(iv);
+
+        cipher.init(Cipher.ENCRYPT_MODE, key, ivSpec);
+        byte[] encrypted = cipher.doFinal("Secret data".getBytes());
+
+        System.out.println("Key: " + Base64.getEncoder().encodeToString(key.getEncoded()));
+        System.out.println("IV: " + Base64.getEncoder().encodeToString(iv));
+        System.out.println("Ciphertext: " + Base64.getEncoder().encodeToString(encrypted));
+    }
+}   
+
+
 from Crypto.Cipher import AES
 from Crypto.Random import get_random_bytes
-from Crypto.Protocol.KDF import scrypt
-import binascii
+import base64
 
-# Generate a random salt and derive a 256-bit key from a password
-password = b"my_secure_password"
-salt = get_random_bytes(16)
-key = scrypt(password, salt, key_len=32, N=2**14, r=8, p=1)
+# Generate 256-bit key and IV
+key = get_random_bytes(32)
+iv = get_random_bytes(16)
 
-# Encrypt data using AES-256-GCM
-data = b"Secret message to encrypt"
-cipher = AES.new(key, AES.MODE_GCM)
-ciphertext, auth_tag = cipher.encrypt_and_digest(data)
+# Encrypt message
+cipher = AES.new(key, AES.MODE_CBC, iv)
+message = "Secret data".encode()
+pad_len = 16 - (len(message) % 16)
+message += bytes([pad_len]) * pad_len
+ciphertext = cipher.encrypt(message)
 
-# Store salt, nonce, and tag with ciphertext
-encrypted_data = salt + cipher.nonce + auth_tag + ciphertext
-print("Encrypted data (hex):", binascii.hexlify(encrypted_data))
+# Output
+print("Key:", base64.b64encode(key).decode())
+print("IV:", base64.b64encode(iv).decode())
+print("Ciphertext:", base64.b64encode(ciphertext).decode())   
 
-# Decrypt data
-salt, nonce, tag, ciphertext = encrypted_data[:16], encrypted_data[16:32], encrypted_data[32:48], encrypted_data[48:]
-key = scrypt(password, salt, key_len=32, N=2**14, r=8, p=1)
-cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
-decrypted_data = cipher.decrypt_and_verify(ciphertext, tag)
-print("Decrypted data:", decrypted_data.decode())   
+
+const crypto = require('crypto');
+
+const key = crypto.randomBytes(32);
+const iv = crypto.randomBytes(16);
+const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
+let encrypted = cipher.update("Secret data", 'utf8', 'hex');
+encrypted += cipher.final('hex');
+
+console.log("Key:", key.toString('hex'));
+console.log("IV:", iv.toString('hex'));
+console.log("Ciphertext:", encrypted);   
+
+
+#include <iostream>
+#include <openssl/aes.h>
+
+int main() {
+    unsigned char key[AES_BLOCK_SIZE];
+    unsigned char iv[AES_BLOCK_SIZE];
+    RAND_bytes(key, AES_BLOCK_SIZE);
+    RAND_bytes(iv, AES_BLOCK_SIZE);
+
+    AES_KEY enc_key;
+    AES_set_encrypt_key(key, 256, &enc_key);
+
+    unsigned char plaintext[16] = "Secret data";
+    int pad_len = 16 - (strlen((char*)plaintext) % 16);
+    for (int i = 0; i < pad_len; i++) plaintext[strlen((char*)plaintext)] = pad_len;
+
+    unsigned char ciphertext[16];
+    AES_cbc_encrypt(plaintext, ciphertext, 16, &enc_key, iv, AES_ENCRYPT);
+
+    std::cout << "Ciphertext: ";
+    for (int i = 0; i < 16; i++) printf("%02x", ciphertext[i]);
+    std::cout << std::endl;
+    return 0;
+}   
+
+
+using System;
+using System.Security.Cryptography;
+using System.Text;
+
+class Program {
+    static void Main() {
+        using (Aes aes = Aes.Create()) {
+            aes.KeySize = 256;
+            aes.GenerateKey();
+            aes.GenerateIV();
+
+            byte[] data = Encoding.UTF8.GetBytes("Secret data");
+            ICryptoTransform encrypt = aes.CreateEncryptor();
+            byte[] ciphertext = encrypt.TransformFinalBlock(data, 0, data.Length);
+
+            Console.WriteLine("Key: " + Convert.ToBase64String(aes.Key));
+            Console.WriteLine("IV: " + Convert.ToBase64String(aes.IV));
+            Console.WriteLine("Ciphertext: " + Convert.ToBase64String(ciphertext));
+        }
+    }
+}   
