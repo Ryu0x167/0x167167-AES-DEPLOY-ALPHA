@@ -23,3 +23,157 @@ key = scrypt(password, salt, key_len=32, N=2**14, r=8, p=1)
 cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
 decrypted_data = cipher.decrypt_and_verify(ciphertext, tag)
 print("Decrypted data:", decrypted_data.decode())   
+
+import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
+import java.util.Base64;
+
+public class AESEncryption {
+    public static void main(String[] args) throws Exception {
+        // Generate a 256-bit AES key
+        KeyGenerator keyGen = KeyGenerator.getInstance("AES");
+        keyGen.init(256, new SecureRandom());
+        SecretKey key = keyGen.generateKey();
+
+        // Encrypt data using AES-256-GCM
+        String plaintext = "Secret message to encrypt";
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+        byte[] iv = new byte; // 96 bits
+        new SecureRandom().nextBytes(iv);
+        GCMParameterSpec gcmSpec = new GCMParameterSpec(128, iv);
+        cipher.init(Cipher.ENCRYPT_MODE, key, gcmSpec);
+        byte[] ciphertext = cipher.doFinal(plaintext.getBytes(StandardCharsets.UTF_8));
+
+        // Output encrypted data (Base64 encoded)
+        System.out.println("Encrypted data (Base64): " + Base64.getEncoder().encodeToString(ciphertext));
+        System.out.println("IV (Base64): " + Base64.getEncoder().encodeToString(iv));
+    }
+}   
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <mcrypt.h>
+
+int main() {
+    // Define plaintext and key
+    char plaintext[] = "Secret message to encrypt";
+    char key[] = "0123456789abcdef"; // 16-byte key for AES-128
+    char iv[] = "0123456789abcdef"; // 16-byte IV
+
+    // Initialize encryption module
+    MCRYPT td = mcrypt_module_open("rijndael-128", NULL, "cbc", NULL);
+    if (td == MCRYPT_FAILED) {
+        fprintf(stderr, "Error opening module\n");
+        return 1;
+    }
+
+    // Initialize encryption
+    if (mcrypt_generic_init(td, key, 16, iv) < 0) {
+        fprintf(stderr, "Error initializing encryption\n");
+        mcrypt_module_close(td);
+        return 1;
+    }
+
+    // Encrypt data
+    int len = strlen(plaintext);
+    char *buffer = malloc(len);
+    memcpy(buffer, plaintext, len);
+    mcrypt_generic(td, buffer, len);
+
+    // Output encrypted data (hex)
+    printf("Encrypted data (hex): ");
+    for (int i = 0; i < len; i++) {
+        printf("%02x", (unsigned char)buffer[i]);
+    }
+    printf("\n");
+
+    // Clean up
+    mdecrypt_generic(td, buffer, len);
+    mcrypt_generic_deinit(td);
+    mcrypt_module_close(td);
+    free(buffer);
+    return 0;
+}   
+
+const crypto = require('crypto');
+
+// Define password and salt
+const password = 'my_secure_password';
+const salt = crypto.randomBytes(16);
+
+// Derive key using scrypt
+crypto.scrypt(password, salt, 32, (err, key) => {
+    if (err) throw err;
+
+    // Encrypt data using AES-256-GCM
+    const iv = crypto.randomBytes(12); // 96 bits
+    const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+    let encrypted = cipher.update('Secret message to encrypt', 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    const tag = cipher.getAuthTag();
+
+    // Output encrypted data (hex)
+    console.log('Encrypted data (hex):', encrypted);
+    console.log('IV (hex):', iv.toString('hex'));
+    console.log('Auth Tag (hex):', tag.toString('hex'));
+});   
+
+#include <iostream>
+#include <vector>
+#include <openssl/aes.h>
+#include <openssl/rand.h>
+#include <openssl/evp.h>
+
+int main() {
+    // Define plaintext and password
+    const char* plaintext = "Secret message to encrypt";
+    const char* password = "my_secure_password";
+
+    // Generate salt and derive key using EVP_BytesToKey
+    std::vector<unsigned char> salt(16);
+    RAND_bytes(salt.data(), 16);
+
+    std::vector<unsigned char> key(32);
+    EVP_BytesToKey(EVP_aes_256_gcm(), EVP_sha256(), salt.data(), 
+                   (unsigned char*)password, strlen(password), 1, key.data(), NULL);
+
+    // Generate IV
+    std::vector<unsigned char> iv(12);
+    RAND_bytes(iv.data(), 12);
+
+    // Encrypt data
+    std::vector<unsigned char> ciphertext(plaintext, plaintext + strlen(plaintext));
+    unsigned char tag;
+    size_t ciphertext_len = ciphertext.size();
+
+    EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
+    EVP_EncryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, key.data(), iv.data());
+    EVP_EncryptUpdate(ctx, ciphertext.data(), &ciphertext_len, (unsigned char*)plaintext, strlen(plaintext));
+    EVP_EncryptFinal_ex(ctx, ciphertext.data() + ciphertext_len, &ciphertext_len);
+    EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, 16, tag);
+
+    // Output encrypted data (hex)
+    std::cout << "Encrypted data (hex): ";
+    for (size_t i = 0; i < ciphertext_len; ++i) {
+        printf("%02x", ciphertext[i]);
+    }
+    std::cout << "\nIV (hex): ";
+    for (size_t i = 0; i < iv.size(); ++i) {
+        printf("%02x", iv[i]);
+    }
+    std::cout << "\nAuth Tag (hex): ";
+    for (size_t i = 0; i < 16; ++i) {
+        printf("%02x", tag[i]);
+    }
+    std::cout << std::endl;
+
+    EVP_CIPHER_CTX_free(ctx);
+    return 0;
+}   
+
